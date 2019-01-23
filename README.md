@@ -22,5 +22,5 @@ Accuracy is about 94.8%
 Unet is an auto-encoder used with medical image. I have used it for semantic segmentation and results are quite good.
 
 ## Sample Prediction
-![img/sample.png](sampleImage.png)
-![img/sample_prediction.png](PredictionResult.png)
+![sampleImage.png](img/sample.png)
+![PredictionResult.png](img/sample_prediction.png)
