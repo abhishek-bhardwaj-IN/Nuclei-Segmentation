@@ -1,7 +1,7 @@
 # Nuclei-Segmentation
 
 Segment Nuclei from Medical Images using U-Net
-
+---
 ## Requirement
 - Opencv
 - Python 3.6
@@ -22,5 +22,9 @@ Accuracy is about 94.8%
 Unet is an auto-encoder used with medical image. I have used it for semantic segmentation and results are quite good.
 
 ## Sample Prediction
+---
+### Test Image
 ![sampleImage.png](img/sample.png)
+
+### Prediction
 ![PredictionResult.png](img/sample_prediction.png)
