@@ -15,7 +15,7 @@ The data used for training is from https://www.kaggle.com/c/data-science-bowl-20
 ## How To Use
 
 - Simply run nuclei-segmentation.py
-
+- Image should be in *.png* format
 - Accuracy is about 94.8%
 
 ## About
