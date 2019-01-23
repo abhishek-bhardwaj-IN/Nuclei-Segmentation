@@ -14,9 +14,9 @@ The data used for training is from https://www.kaggle.com/c/data-science-bowl-20
 
 ## How To Use
 
-Simply run nuclei-segmentation.py
+- Simply run nuclei-segmentation.py
 
-Accuracy is about 94.8%
+- Accuracy is about 94.8%
 
 ## About
 Unet is an auto-encoder used with medical image. I have used it for semantic segmentation and results are quite good.
