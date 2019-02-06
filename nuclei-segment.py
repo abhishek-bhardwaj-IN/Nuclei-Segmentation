@@ -10,6 +10,13 @@ from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint
 import cv2
 
+"""
+This class is responsible for pre-processing training
+and testing images. Our U-Net model is designed to take input of shape
+(512,512,3) and returns binary segmented image of shape (512, 512).
+
+White regions in the output image denote probable nucleus region.
+"""
 class dataProcess(object):
     def __init__(self, out_rows, out_cols, data_path="./data/train/image", label_path="./data/train/label",
                  test_path="./data/test/image", npy_path="./npydata", img_type="png"):
@@ -20,14 +27,18 @@ class dataProcess(object):
         self.img_type = img_type
         self.test_path = test_path
         self.npy_path = npy_path
+"""
+create_train_data() function is responsible for converting training images
+into training vectors and storing it as a numpy array.
 
+implementation is using keras preprocessing library.
+"""
     def create_train_data(self):
         i=0
         print('Processing Training Images..')
         imgs = glob.glob(self.data_path + "/*." + self.img_type)
         imgdatas = np.ndarray((len(imgs), self.out_rows, self.out_cols, 3), dtype = np.uint8)
         imglabels = np.ndarray((len(imgs), self.out_rows, self.out_cols, 1), dtype = np.uint8)
-
         for x in range(len(imgs)):
             imgpath = imgs[x]
             pic_name = imgpath.split('/')[-1]
@@ -46,7 +57,10 @@ class dataProcess(object):
         np.save(self.npy_path + '/imgs_train.npy', imgdatas)
         np.save(self.npy_path + '/imgs_mask_train.npy', imglabels)
         print('Coded images to .npy files')
-
+"""
+create_test_data() also does same function as create_train_data() but
+its for test images.
+"""
     def create_test_data(self):
         i=0
         print('Processing Test Images..')
@@ -69,7 +83,11 @@ class dataProcess(object):
         print('Test Images Processed Successfully')
         np.save(self.npy_path + '/imgs_test.npy', imgdatas)
         print("Saved npy files to imgs_test.npy.")
-
+"""
+major task of below two functions is to perform
+normalization of training and testing data for
+better results.
+"""
     def load_train_data(self):
         print('Loading Train Images..')
         imgs_train = np.load(self.npy_path + "/imgs_train.npy")
@@ -91,6 +109,13 @@ class dataProcess(object):
         imgs_test /= 255
         return imgs_test
 
+"""
+Below given class deals with U-Net implementation
+i.e train and testing.
+
+The model creates a hdf5 file to store best weights
+and parameters in it.
+"""
 
 class loadUnet(object):
     def __init__(self, img_rows=512, img_cols=512, training=False):
@@ -98,14 +123,33 @@ class loadUnet(object):
         self.img_cols = img_cols
         self.training = training
 
+#         Functiion to load data into U-Net architecture
+
     def load_data(self):
         mydata = dataProcess(self.img_rows, self.img_cols)
         imgs_train, imgs_mask_train = mydata.load_train_data()
         imgs_test = mydata.load_test_data()
         return imgs_train, imgs_mask_train, imgs_test
+"""
+U-Net is composed of 3 parts:
+1 : The contracting/downsampling path
+2 : Bottleneck
+3 : The expanding/upsampling path
 
+Below function performs same.
+"""
     def load_unet(self):
         inputs = Input((self.img_rows, self.img_cols, 3))
+        """
+        Contracting/downsampling path
+        
+        The contracting path is composed of 4 blocks. Each block is composed of
+
+            1. 3x3 Convolution Layer + activation function (with batch normalization)
+            2. 3x3 Convolution Layer + activation function (with batch normalization)
+            3. 2x2 Max Pooling
+            
+        """
         conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(inputs)
         conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv1)
         pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
@@ -115,6 +159,12 @@ class loadUnet(object):
         conv3 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
         conv3 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv3)
         pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+        """
+        Bottleneck
+
+        This part of the network is between the contracting and expanding paths. 
+        The bottleneck is built from simply 2 convolutional layers (with batch normalization), with dropout.
+        """
         conv4 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
         conv4 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
         print("Using Dropout..")
@@ -124,6 +174,19 @@ class loadUnet(object):
         conv5 = Conv2D(1024, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv5)
         print("Using Dropout..")
         drop5 = Dropout(0.5)(conv5)
+        
+        """
+        Expanding/upsampling path
+
+            The expanding path is also composed of 4 blocks. Each of these blocks is composed of
+
+            1. Deconvolution layer with stride 2
+            2. Concatenation with the corresponding cropped feature map from the contracting path
+            3. 3x3 Convolution layer + activation function (with batch normalization)
+            4. 3x3 Convolution layer + activation function (with batch normalization)
+            
+        """
+        
         up6 = Conv2D(512, 2, activation='relu', padding='same', kernel_initializer='he_normal')(UpSampling2D(size=(2, 2))(drop5))
         merge6 = concatenate([drop4, up6], axis=3)
         conv6 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge6)
@@ -147,6 +210,8 @@ class loadUnet(object):
         if(self.training==False):
             model.load_weights("unet.hdf5")
         return model
+    
+# Function for U-Net training (if enabled)
 
     def train(self):
         print("Loading Train Matrix..")
@@ -164,7 +229,11 @@ class loadUnet(object):
         print("Predicting Test Results")
         imgs_mask_test = model.predict(imgs_test, batch_size=2, verbose=1)
         np.save('./results/imgs_mask_test.npy', imgs_mask_test)
+"""
+Below function saves prediction in the form of image
+i.e. converting array into matrices using opencv library.
 
+"""
     def save_img(self):
         print("Converting Test array to image")
         imgs = np.load('./results/imgs_mask_test.npy')
@@ -185,6 +254,8 @@ class loadUnet(object):
             binary, cv_save = cv2.threshold(cv_pic, 127, 255, cv2.THRESH_BINARY)
             cv2.imwrite(path, cv_save)
         print("Coversion Complete")
+
+# Execution Block
 
 if __name__ == '__main__':
     Data = dataProcess(512,512)
