@@ -28,4 +28,3 @@ Unet is an auto-encoder used with medical image. I have used it for semantic seg
 
 ### Prediction
 ![PredictionResult.png](img/sample_prediction.png)
-Additionally formated by Utkarsh Jain
